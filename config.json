@@ -1,0 +1,4 @@
+{
+    "Templates_dir" : "templates",
+    "Template_regexp" : "^_.*"
+}
