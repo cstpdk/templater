@@ -17,9 +17,8 @@ func init() {
         templatesCount = 2
         templatesDir = "test_data/templates"
 
-        tmpl, _ := os.Open(path.Join(templatesDir, "_john.html"))
-        data, _ := os.Open(path.Join(templatesDir, "john.html.json"))
-        print(tmpl, data)
+        tmpl, _ = os.Open(path.Join(templatesDir, "_john.html"))
+        data, _ = os.Open(path.Join(templatesDir, "john.html.json"))
 }
 
 func TestIsTemplateFile(t *testing.T) {
@@ -73,6 +72,22 @@ func TestFindTemplateDataFile(t *testing.T) {
 }
 
 func TestFindTemplateData(t *testing.T) {
-        print(tmpl, "\n", data, "\n")
-        findTemplateData(tmpl, data)
+        res := findTemplateData(tmpl, data)
+
+        if res["A_STRING"] != "string" {
+                t.Fatal()
+        }
+}
+
+func TestGenerateTemplates(t *testing.T) {
+        tmpls := []Template{
+                Template{
+                        Tmplfile: tmpl,
+                        Datafile: data,
+                        Data: map[string]interface{}{
+                                "A_STRING": "joe",
+                        },
+                },
+        }
+        generateTemplates("test_data/generated", tmpls)
 }

@@ -1,11 +1,13 @@
 package main
 
 import (
-        //"fmt"
+        "encoding/json"
+        "fmt"
         "io/ioutil"
         "os"
         "path"
         "regexp"
+        "text/template"
 )
 
 var (
@@ -18,7 +20,7 @@ var (
 type Template struct {
         Tmplfile *os.File
         Datafile *os.File
-        Data     *interface{} // Read data
+        Data     map[string]interface{} // Read data
 }
 
 // Check whether the filename provided corresponds to being a template
@@ -88,10 +90,37 @@ func findTemplateDataFile(dirname string, tmplFilename string) *os.File {
 }
 
 // Extract correct data from a data file in the system
-func findTemplateData(tmplfile *os.File, datafile *os.File) *interface{} {
-        //print(tmplfile.Name(), " ", datafile.Name(), "\n")
-        iface := new(interface{})
-        return iface
+func findTemplateData(tmplfile *os.File, datafile *os.File) map[string]interface{} {
+        var data interface{}
+        if datafile == nil {
+                return make(map[string]interface{})
+        }
+        b, _ := ioutil.ReadFile(datafile.Name())
+        json.Unmarshal(b, &data)
+        m := data.(map[string]interface{})
+
+        //for k, v := range m {
+        //        switch vv := v.(type) {
+        //        case string:
+        //                fmt.Println("\n", k, "is string", vv)
+        //        case int:
+        //                fmt.Println("\n", k, "is int", vv)
+        //        case float64:
+        //                fmt.Println("\n", k, "is a double", vv)
+        //        case float32:
+        //                fmt.Println("\n", k, "is a double", vv)
+        //        case []interface{}:
+        //                fmt.Println("\n", k, "is an array:")
+        //                for i, u := range vv {
+        //                        fmt.Println(i, u)
+        //                }
+        //        default:
+        //                fmt.Println(k, "is of a type I don't know how to handle")
+        //                fmt.Printf("%v:%t", v, vv)
+        //        }
+        //}
+
+        return m
 }
 
 // Fill templates with correct values for all templates
@@ -112,12 +141,28 @@ func findTemplates(dirname string) []Template {
         return templates
 }
 
-// For all templates, create their file in generated
+// For all templates, create them in an appropiate location
+func generateTemplates(destinationDir string, tmpls []Template) {
+        templ := tmpls[0] // TODO loop
+        fmt.Printf("%v", templ)
+        tmplBytes, _ := ioutil.ReadFile(templ.Tmplfile.Name())
+        tmpl := template.Must(template.New("NAME").Parse(string(tmplBytes[:])))
+        fmt.Printf("%v", templ.Data)
+        destination, err := os.OpenFile(path.Join(destinationDir, "joe"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+        if err != nil {
+                panic(err)
+        }
+        err = tmpl.Execute(destination, templ.Data)
+        if err != nil {
+                panic(err)
+        }
+}
 
 func init() {
         MakeConfig(&config, "config.json")
 
-        //findTemplates(config.Templates_dir)
+        tmpls := findTemplates(config.Templates_dir)
+        generateTemplates("./generated", tmpls)
 }
 
 func main() {
