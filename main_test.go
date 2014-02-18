@@ -77,11 +77,19 @@ func TestFindTemplateData(t *testing.T) {
         if res["A_STRING"] != "string" {
                 t.Fatal()
         }
+        if res["lowercase_key"] != "ok" {
+                t.Fatal()
+        }
+        if _, present := res["bogus_key"]; present {
+                t.Fatal()
+        }
 }
 
 func TestGenerateTemplates(t *testing.T) {
+
         tmpls := []Template{
                 Template{
+                        Name:     "joe",
                         Tmplfile: tmpl,
                         Datafile: data,
                         Data: map[string]interface{}{
@@ -89,5 +97,20 @@ func TestGenerateTemplates(t *testing.T) {
                         },
                 },
         }
-        generateTemplates("test_data/generated", tmpls)
+
+        locationDir := "test_data/generated"
+        filename := path.Join(locationDir, tmpls[0].Name)
+
+        if err := os.Remove(filename); !os.IsNotExist(err) &&
+                err != nil {
+
+                t.Fatal("Couldn't delete previous file"+
+                        "for some reason", err)
+        }
+
+        generateTemplates(locationDir, tmpls)
+
+        if _, err := os.Stat(filename); os.IsNotExist(err) {
+                t.Fatal("Template file was not generated")
+        }
 }

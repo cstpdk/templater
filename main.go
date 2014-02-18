@@ -2,7 +2,6 @@ package main
 
 import (
         "encoding/json"
-        "fmt"
         "io/ioutil"
         "os"
         "path"
@@ -18,9 +17,11 @@ var (
 // Template type, holds location of template, data etc.
 
 type Template struct {
-        Tmplfile *os.File
-        Datafile *os.File
-        Data     map[string]interface{} // Read data
+        Name            string
+        Destination_dir string
+        Tmplfile        *os.File
+        Datafile        *os.File
+        Data            map[string]interface{} // Read data
 }
 
 // Check whether the filename provided corresponds to being a template
@@ -60,7 +61,7 @@ func findTemplateFiles(dirname string) []*os.File {
 // filename
 func isDataForTemplate(tmplFilename string, dataFilename string) bool {
         matched, err := regexp.MatchString(
-                tmplFilename+`\.json`, "_"+dataFilename)
+                path.Base(tmplFilename)+`\.json`, "_"+dataFilename)
         if err != nil {
                 panic("The regexp for finding template data is wrong")
         }
@@ -99,28 +100,41 @@ func findTemplateData(tmplfile *os.File, datafile *os.File) map[string]interface
         json.Unmarshal(b, &data)
         m := data.(map[string]interface{})
 
-        //for k, v := range m {
-        //        switch vv := v.(type) {
-        //        case string:
-        //                fmt.Println("\n", k, "is string", vv)
-        //        case int:
-        //                fmt.Println("\n", k, "is int", vv)
-        //        case float64:
-        //                fmt.Println("\n", k, "is a double", vv)
-        //        case float32:
-        //                fmt.Println("\n", k, "is a double", vv)
-        //        case []interface{}:
-        //                fmt.Println("\n", k, "is an array:")
-        //                for i, u := range vv {
-        //                        fmt.Println(i, u)
-        //                }
-        //        default:
-        //                fmt.Println(k, "is of a type I don't know how to handle")
-        //                fmt.Printf("%v:%t", v, vv)
-        //        }
-        //}
-
         return m
+}
+
+// Create a Template struct based on values given in the datafile.
+// Account for special/reserved values
+func generateTemplateFromFiles(tmplfile *os.File,
+        datafile *os.File) Template {
+
+        // Data file for the template
+        data := findTemplateData(tmplfile, datafile)
+
+        // If data file specifies a name use that, otherwise use
+        // file location as name
+        var name string
+        if n, present := data["Name"]; present {
+                name = n.(string)
+        } else {
+                name = tmplfile.Name()
+        }
+
+        // If the data file specifies a location for the file use that,
+        // Otherwise use a generic location
+        var destination string
+        if d, present := data["Destination"]; present {
+                destination = d.(string)
+        } else {
+                destination = config.Default_output_dir
+        }
+        return Template{
+                Destination_dir: destination,
+                Name:            name,
+                Tmplfile:        tmplfile,
+                Datafile:        datafile,
+                Data:            data,
+        }
 }
 
 // Fill templates with correct values for all templates
@@ -131,40 +145,48 @@ func findTemplates(dirname string) []Template {
         templates := []Template{}
         for _, e := range tmplFiles {
                 datafile := findTemplateDataFile(dirname, e.Name())
-                templates = append(templates, Template{
-                        Tmplfile: e,
-                        Datafile: datafile,
-                        Data:     findTemplateData(e, datafile),
-                })
+                tmpl := generateTemplateFromFiles(e, datafile)
+                templates = append(templates, tmpl)
         }
 
         return templates
 }
 
-// For all templates, create them in an appropiate location
-func generateTemplates(destinationDir string, tmpls []Template) {
-        templ := tmpls[0] // TODO loop
-        fmt.Printf("%v", templ)
+// Extract a go template and the file to put it in from a Template{}
+func generateTemplate(templ Template) (*os.File,
+        *template.Template, error) {
+
         tmplBytes, _ := ioutil.ReadFile(templ.Tmplfile.Name())
-        tmpl := template.Must(template.New("NAME").Parse(string(tmplBytes[:])))
-        fmt.Printf("%v", templ.Data)
-        destination, err := os.OpenFile(path.Join(destinationDir, "joe"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+        tmpl := template.Must(template.New(templ.Name).Parse(string(tmplBytes[:])))
+        destination := path.Join(templ.Destination_dir, templ.Name)
+        destinationFile, err := os.OpenFile(destination, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+
         if err != nil {
-                panic(err)
+                return nil, nil, err
         }
-        err = tmpl.Execute(destination, templ.Data)
-        if err != nil {
-                panic(err)
+        return destinationFile, tmpl, nil
+}
+
+// For all templates, create them in an appropiate location
+func generateTemplates(tmpls []Template) {
+
+        for _, e := range tmpls {
+                file, tmpl, err := generateTemplate(e)
+
+                if err != nil {
+                        panic(err)
+                }
+
+                tmpl.Execute(file, e.Data)
         }
+
 }
 
 func init() {
         MakeConfig(&config, "config.json")
-
-        tmpls := findTemplates(config.Templates_dir)
-        generateTemplates("./generated", tmpls)
 }
 
 func main() {
-
+        tmpls := findTemplates(config.Templates_dir)
+        generateTemplates(tmpls)
 }

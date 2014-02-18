@@ -1,3 +1,5 @@
 {
-    "Templates_dir" : "templates"
+    "Templates_dir" : "templates",
+    "Template_regexp" : "^_.*",
+    "Default_output_dir": "generated"
 }

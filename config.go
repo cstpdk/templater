@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-        Templates_dir   string
-        Template_regexp string
+        Templates_dir      string
+        Template_regexp    string
+        Default_output_dir string
 }
 
 func MakeConfig(conf *Config, configFile string) {

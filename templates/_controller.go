@@ -1,3 +1,4 @@
+{{template "_model.go" .}}
 package api
 
 import (

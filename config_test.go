@@ -12,4 +12,8 @@ func TestNew(t *testing.T) {
         if conf.Templates_dir != "templates" {
                 t.Fatalf("Wrong templates dir read\n It was %s", conf.Templates_dir)
         }
+
+        if conf.Default_output_dir != "generated" {
+                t.Fatal()
+        }
 }

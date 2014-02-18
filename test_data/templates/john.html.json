@@ -1,4 +1,6 @@
 {
+  "Name":"john_template",
+  "lowercase_key":"ok",
   "A_STRING":"string",
   "AN_INT": 8,
   "A_LIST":[1,2,3,4],

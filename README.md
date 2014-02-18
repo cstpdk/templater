@@ -32,6 +32,7 @@ should specify a distinct file-location (see \ref{special_fields})
 
 ### Special fields
 There are some "special" fields that template data can contain:
-- "file-location": Specifies where to place the created file. If not specified,
-the generated file will be created in "generated/"
-
+- "destination": Specifies where to place the created file. If not specified,
+the generated file will be created in "Default_output_dir" from config
+- "name": specifies a name for the generated templated. Final destination
+will be "destination"/"name"
